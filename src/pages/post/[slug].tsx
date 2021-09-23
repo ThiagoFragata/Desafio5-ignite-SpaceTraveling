@@ -1,15 +1,20 @@
-import React from 'react';
-
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
+import { useRouter } from 'next/router';
+import Image from 'next/image';
 
-import Header from '../../components/Header';
+import Prismic from '@prismicio/client';
+import { FiUser, FiClock } from 'react-icons/fi';
+import { AiOutlineCalendar } from 'react-icons/ai';
+
+import { RichText } from 'prismic-dom';
+
+import { format } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 
 import { getPrismicClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
-import { FiCalendar, FiClock, FiUser } from 'react-icons/fi';
 
 interface Post {
     first_publication_date: string | null;
@@ -33,83 +38,108 @@ interface PostProps {
 }
 
 export default function Post({ post }: PostProps) {
+    const router = useRouter();
+
+    if (router.isFallback) {
+        return <div>Carregando...</div>;
+    }
+
+    function getReadingTime(): number {
+        const regexPattern = /[^\w]/;
+        const totalWords = post.data.content.reduce((total, item) => {
+            const totaHeadinglWords =
+                item.heading?.split(regexPattern).length ?? 0;
+
+            const totalBodyWords = item.body.reduce((bodyTotal, bodyItem) => {
+                return bodyTotal + bodyItem.text.split(regexPattern).length;
+            }, 0);
+
+            return total + totaHeadinglWords + totalBodyWords;
+        }, 0);
+
+        return Math.round(totalWords / 200);
+    }
+
     return (
         <>
-            <Head>
-                <title>spacetraveling | slug</title>
-            </Head>
-            <Header />
-            <img src="/teste.png" alt="Banner" className={styles.banner} />
-            <main className={commonStyles.container}>
-                <div className={styles.post}>
-                    <div className={styles.postTop}>
-                        <h1>Algum title</h1>
-                        <ul>
-                            <li>
-                                <FiCalendar />
-                                12 Mar 2021
-                            </li>
-                            <li>
-                                <FiUser />
-                                Thiago Fragata
-                            </li>
-                            <li>
-                                <FiClock />
-                                5 minutos
-                            </li>
-                        </ul>
-                        
+            <img
+                src={post.data.banner.url}
+                alt={post.data.title}
+                className={styles.banner}
+            />
+            <article className={styles.container}>
+                <h1>{post.data.title}</h1>
+                <div className={styles.info}>
+                    <div>
+                        <span>
+                            <AiOutlineCalendar />
+                            <span>
+                                {format(
+                                    new Date(post.first_publication_date),
+                                    'dd MMM yyyy',
+                                    {
+                                        locale: ptBR,
+                                    }
+                                )}
+                            </span>
+                        </span>
+                        <span>
+                            <FiUser />
+                            <span>{post.data.author}</span>
+                        </span>
+                        <span>
+                            <FiClock />
+                            <span>{getReadingTime()} min</span>
+                        </span>
                     </div>
-                    <article>
-                        <section>
-                            <h2>lorem ipsum</h2>
-                            <p>
-                                Lorem ipsum dolor, sit amet consectetur
-                                adipisicing elit. Quod blanditiis atque, velit
-                                labore ipsam iste! <a href="#">Vero</a> eius
-                                ipsa aliquid qui maiores voluptate tenetur
-                                assumenda doloribus numquam repellat quae, rerum
-                                hic.
-                            </p>
-                        </section>
-                        <section>
-                            <h2>lorem ipsum</h2>
-                            <p>
-                                Lorem ipsum dolor, sit amet consectetur
-                                adipisicing elit.{' '}
-                                <strong>Quod blanditiis </strong> atque, velit
-                                labore ipsam iste! Vero eius ipsa aliquid qui
-                                maiores voluptate tenetur assumenda doloribus
-                                numquam repellat quae, rerum hic.
-                            </p>
-                        </section>
-                        <section>
-                            <h2>lorem ipsum</h2>
-                            <p>
-                                Lorem ipsum dolor, sit amet consectetur
-                                adipisicing elit. Quod blanditiis atque, velit
-                                labore ipsam iste! Vero eius ipsa aliquid qui
-                                maiores voluptate tenetur assumenda doloribus
-                                numquam repellat quae, rerum hic.
-                            </p>
-                        </section>
-                    </article>
                 </div>
-            </main>
+                <div className={styles.content}>
+                    {post.data.content.map(content => (
+                        <div key={(Math.random() * 9999999).toString()}>
+                            <h2>{content.heading}</h2>
+                            <div
+                                dangerouslySetInnerHTML={{
+                                    __html: RichText.asHtml(content.body),
+                                }}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </article>
         </>
     );
 }
 
-// export const getStaticPaths = async () => {
-//   const prismic = getPrismicClient();
-//   const posts = await prismic.query(TODO);
+export const getStaticPaths: GetStaticPaths = async () => {
+    const prismic = getPrismicClient();
+    const postsResponse = await prismic.query(
+        [Prismic.predicates.at('document.type', 'posts')],
+        {}
+    );
 
-//   // TODO
-// };
+    const slugsParams = postsResponse.results.map(result => {
+        return {
+            params: {
+                slug: result.uid,
+            },
+        };
+    });
 
-// export const getStaticProps = async context => {
-//   const prismic = getPrismicClient();
-//   const response = await prismic.getByUID(TODO);
+    return {
+        paths: slugsParams,
+        fallback: false,
+    };
+};
 
-//   // TODO
-// };
+export const getStaticProps: GetStaticProps = async context => {
+    const prismic = getPrismicClient();
+    const response = await prismic.getByUID(
+        'posts',
+        String(context.params.slug),
+        {}
+    );
+
+    return {
+        props: { post: response },
+    };
+};
