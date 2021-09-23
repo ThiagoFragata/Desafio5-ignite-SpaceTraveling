@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { GetStaticProps } from 'next';
 import Link from 'next/link';
 
-import { getPrismicClient } from '../services/prismic';
 import Prismic from '@prismicio/client';
-
-import commonStyles from '../styles/common.module.scss';
-import styles from './home.module.scss';
-import Header from '../components/Header';
 
 import { FiCalendar } from 'react-icons/fi';
 import { FiUser } from 'react-icons/fi';
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Header from '../components/Header';
+import styles from './home.module.scss';
+import commonStyles from '../styles/common.module.scss';
+import { getPrismicClient } from '../services/prismic';
+
+import Head from 'next/head';
 
 interface Post {
     uid?: string;
@@ -86,33 +87,39 @@ export default function Home({ postsPagination }: HomeProps) {
     }
 
     return (
-        <div className={commonStyles.container}>
-            <Header />
-            <main className={styles.posts}>
-                {posts.map(post => (
-                    <Link href={`/post/${post.uid}`} key={post.uid}>
-                        <a className={styles.post}>
-                            <strong>{post.data.title}</strong>
-                            <p>{post.data.subtitle}</p>
-                            <span>
-                                <FiCalendar />
-                                {post.first_publication_date}
-                            </span>
-                            <span>
-                                <FiUser />
-                                {post.data.author}
-                            </span>
-                        </a>
-                    </Link>
-                ))}
+        <>
+            <Head>
+                <title>spacetraveling</title>
+            </Head>
+            <div className={commonStyles.container}>
+                <Header />
+                <main className={styles.posts}>
+                    {posts.map(post => (
+                        <Link href={`/post/${post.uid}`} key={post.uid}>
+                            <a className={styles.post}>
+                                <strong>{post.data.title}</strong>
+                                <p>{post.data.subtitle}</p>
+                                
+                                <span>
+                                    <FiCalendar />
+                                    {post.first_publication_date}
+                                </span>
+                                <span>
+                                    <FiUser />
+                                    {post.data.author}
+                                </span>
+                            </a>
+                        </Link>
+                    ))}
 
-                {nextPage && (
-                    <button type="button" onClick={handleNextPage}>
-                        Carregar mais posts
-                    </button>
-                )}
-            </main>
-        </div>
+                    {nextPage && (
+                        <button type="button" onClick={handleNextPage}>
+                            Carregar mais posts
+                        </button>
+                    )}
+                </main>
+            </div>
+        </>
     );
 }
 
