@@ -1,7 +1,9 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import Document, { Head, Html, Main, NextScript } from 'next/document';
 
 export default class MyDocument extends Document {
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     render() {
         return (
             <Html lang="pt-BR">
@@ -23,6 +25,11 @@ export default class MyDocument extends Document {
                 <body>
                     <Main />
                     <NextScript />
+                    <script
+                        async
+                        defer
+                        src="https://static.cdn.prismic.io/prismic.js?new=true&repo=spacetravelingfragata"
+                    />
                 </body>
             </Html>
         );
